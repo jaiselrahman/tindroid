@@ -20,7 +20,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
 import androidx.appcompat.widget.Toolbar;
-import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.selection.Selection;
 import androidx.recyclerview.selection.SelectionTracker;
@@ -217,12 +216,7 @@ public class ChatsFragment extends Fragment implements ActionMode.Callback, UiUt
                 return true;
 
             case R.id.action_settings:
-                activity.showFragment(ChatsActivity.FRAGMENT_EDIT_ACCOUNT);
-                return true;
-
-            case R.id.action_about:
-                DialogFragment about = new AboutDialogFragment();
-                about.show(getParentFragmentManager(), "about");
+                activity.showFragment(ChatsActivity.FRAGMENT_ACCOUNT_INFO);
                 return true;
 
             case R.id.action_offline:
@@ -382,7 +376,7 @@ public class ChatsFragment extends Fragment implements ActionMode.Callback, UiUt
                             @SuppressWarnings("unchecked")
                             ComTopic<VxCard> t = (ComTopic<VxCard>) Cache.getTinode().getTopic(name);
                             try {
-                                reply = t.delete().thenCatch(new PromisedReply.FailureListener<ServerMessage>() {
+                                reply = t.delete(true).thenCatch(new PromisedReply.FailureListener<ServerMessage>() {
                                     @Override
                                     public PromisedReply<ServerMessage> onFailure(final Exception err) {
                                         activity.runOnUiThread(new Runnable() {

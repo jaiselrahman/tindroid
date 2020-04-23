@@ -6,15 +6,22 @@ import com.fasterxml.jackson.databind.JavaType;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import co.tinode.tinodesdk.model.Acs;
+import co.tinode.tinodesdk.model.AcsHelper;
 import co.tinode.tinodesdk.model.Credential;
 import co.tinode.tinodesdk.model.Description;
 import co.tinode.tinodesdk.model.Drafty;
+import co.tinode.tinodesdk.model.MetaSetSub;
+import co.tinode.tinodesdk.model.MsgGetMeta;
+import co.tinode.tinodesdk.model.MsgServerCtrl;
 import co.tinode.tinodesdk.model.MsgServerMeta;
 import co.tinode.tinodesdk.model.MsgServerPres;
+import co.tinode.tinodesdk.model.MsgSetMeta;
 import co.tinode.tinodesdk.model.PrivateType;
 import co.tinode.tinodesdk.model.ServerMessage;
 import co.tinode.tinodesdk.model.Subscription;
@@ -25,6 +32,7 @@ import co.tinode.tinodesdk.model.Subscription;
 public class MeTopic<DP> extends Topic<DP,PrivateType,DP,PrivateType> {
     private static final String TAG = "MeTopic";
 
+    @SuppressWarnings("WeakerAccess")
     protected ArrayList<Credential> mCreds;
 
     public MeTopic(Tinode tinode, Listener<DP,PrivateType,DP,PrivateType> l) {
@@ -75,14 +83,31 @@ public class MeTopic<DP> extends Topic<DP,PrivateType,DP,PrivateType> {
     }
     public void setPriv(PrivateType priv) { /* do nothing */ }
 
+    @Override
+    public Date getSubsUpdated() {
+        return mTinode.getTopicsUpdated();
+    }
 
+
+    /**
+     * Get current user's credentials, such as emails and phone numbers.
+     */
     public Credential[] getCreds() {
         return mCreds != null ? mCreds.toArray(new Credential[]{}) : null;
     }
 
-    @Override
-    public Date getSubsUpdated() {
-        return mTinode.getTopicsUpdated();
+    public void setCreds(Credential[] creds) {
+        if (creds == null) {
+            mCreds = null;
+        } else {
+            mCreds = new ArrayList<>();
+            for (Credential cred : creds) {
+                if (cred.meth != null && cred.val != null) {
+                    mCreds.add(cred);
+                }
+            }
+            Collections.sort(mCreds);
+        }
     }
 
     /**
@@ -101,14 +126,18 @@ public class MeTopic<DP> extends Topic<DP,PrivateType,DP,PrivateType> {
                         return null;
                     }
 
-                    int idx = findCredential(cred, false);
+                    int idx = findCredIndex(cred, false);
                     if (idx >= 0) {
                         mCreds.remove(idx);
-                    }
 
-                    // Notify listeners
-                    if (mListener != null && mListener instanceof MeListener) {
-                        ((MeListener) mListener).onCredUpdated(mCreds.toArray(new Credential[]{}));
+                        if (mStore != null) {
+                            mStore.topicUpdate(MeTopic.this);
+                        }
+
+                        // Notify listeners
+                        if (mListener != null && mListener instanceof MeListener) {
+                            ((MeListener) mListener).onCredUpdated(mCreds.toArray(new Credential[]{}));
+                        }
                     }
                     return null;
                 }
@@ -120,6 +149,80 @@ public class MeTopic<DP> extends Topic<DP,PrivateType,DP,PrivateType> {
         }
 
         return new PromisedReply<>(new NotConnectedException());
+    }
+
+    public PromisedReply<ServerMessage> confirmCred(final String meth, final String resp) {
+        return setMeta(new MsgSetMeta<DP, PrivateType>(new Credential(meth, null, resp, null)));
+    }
+
+    @Override
+    public PromisedReply<ServerMessage> updateMode(final String update) {
+        if (mDesc.acs == null) {
+            mDesc.acs = new Acs();
+        }
+
+        final AcsHelper mode = mDesc.acs.getWantHelper();
+        if (mode.update(update)) {
+            return setSubscription(new MetaSetSub(null, mode.toString()));
+        }
+        // The state is unchanged, return resolved promise.
+        return new PromisedReply<>((ServerMessage) null);
+    }
+
+    /**
+     * Topic sent an update to subscription, got a confirmation.
+     *
+     * @param params {ctrl} parameters returned by the server (could be null).
+     * @param sSub   updated topic parameters.
+     */
+    @Override
+    protected void update(Map<String, Object> params, MetaSetSub sSub) {
+        //noinspection unchecked
+        Map<String, String> acsMap = params != null ? (Map<String, String>) params.get("acs") : null;
+        Acs acs;
+        if (acsMap != null) {
+            acs = new Acs(acsMap);
+        } else {
+            acs = new Acs();
+            acs.setWant(sSub.mode);
+        }
+
+        boolean changed;
+        if (mDesc.acs == null) {
+            mDesc.acs = acs;
+            changed = true;
+        } else {
+            changed = mDesc.acs.merge(acs);
+        }
+
+        if (changed && mStore != null) {
+            mStore.topicUpdate(this);
+        }
+    }
+
+    /**
+     * Topic sent an update to description or subscription, got a confirmation, now
+     * update local data with the new info.
+     *
+     * @param ctrl {ctrl} packet sent by the server
+     * @param meta original {meta} packet updated topic parameters
+     */
+    @Override
+    protected void update(MsgServerCtrl ctrl, MsgSetMeta<DP,PrivateType> meta) {
+        super.update(ctrl, meta);
+
+        if (meta.cred != null) {
+            routeMetaCred(meta.cred);
+        }
+    }
+
+    @Override
+    protected void routeMeta(MsgServerMeta<DP,PrivateType,DP,PrivateType> meta) {
+        if (meta.cred != null) {
+            routeMetaCred(meta.cred);
+        }
+
+        super.routeMeta(meta);
     }
 
     @Override
@@ -178,7 +281,7 @@ public class MeTopic<DP> extends Topic<DP,PrivateType,DP,PrivateType> {
         }
     }
 
-    private int findCredential(Credential other, boolean anyUnconfirmed) {
+    private int findCredIndex(Credential other, boolean anyUnconfirmed) {
         int i = 0;
         for (Credential cred : mCreds) {
             if (cred.meth.equals(other.meth) && ((anyUnconfirmed && !cred.isDone()) || cred.val.equals(other.val))) {
@@ -195,19 +298,21 @@ public class MeTopic<DP> extends Topic<DP,PrivateType,DP,PrivateType> {
             return;
         }
 
+        boolean changed = false;
         if (cred.val != null) {
             if (mCreds == null) {
                 // Empty list. Create and add.
                 mCreds = new ArrayList<>();
                 mCreds.add(cred);
+                changed = true;
             } else {
                 // Try finding this credential among confirmed or not.
-                int idx = findCredential(cred, false);
+                int idx = findCredIndex(cred, false);
                 if (idx < 0) {
                     // Not found.
                     if (!cred.isDone()) {
                         // Unconfirmed credential replaces previous unconfirmed credential of the same method.
-                        idx = findCredential(cred, true);
+                        idx = findCredIndex(cred, true);
                         if (idx >= 0) {
                             // Remove previous unconfirmed credential.
                             mCreds.remove(idx);
@@ -216,21 +321,33 @@ public class MeTopic<DP> extends Topic<DP,PrivateType,DP,PrivateType> {
                     mCreds.add(cred);
                 } else {
                     // Found. Maybe change 'done' status.
-                    Credential el = this.mCreds.get(idx);
+                    Credential el = mCreds.get(idx);
                     el.done = cred.isDone();
                 }
+                changed = true;
             }
-        } else if (cred.resp != null) {
+        } else if (cred.resp != null && mCreds != null) {
             // Handle credential confirmation.
-            int idx = findCredential(cred, true);
+            int idx = findCredIndex(cred, true);
             if (idx >= 0) {
-                Credential el = this.mCreds.get(idx);
+                Credential el = mCreds.get(idx);
                 el.done = true;
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            if (mCreds != null) {
+                Collections.sort(mCreds);
+            }
+
+            if (mStore != null) {
+                mStore.topicUpdate(this);
             }
         }
     }
 
-    @Override
+    @SuppressWarnings("WeakerAccess")
     protected void routeMetaCred(Credential cred) {
         processOneCred(cred);
 
@@ -239,8 +356,7 @@ public class MeTopic<DP> extends Topic<DP,PrivateType,DP,PrivateType> {
         }
     }
 
-
-    @Override
+    @SuppressWarnings("WeakerAccess")
     protected void routeMetaCred(Credential[] creds) {
         mCreds = new ArrayList<>();
         for (Credential cred : creds) {
@@ -248,6 +364,12 @@ public class MeTopic<DP> extends Topic<DP,PrivateType,DP,PrivateType> {
                 mCreds.add(cred);
             }
         }
+        Collections.sort(mCreds);
+
+        if (mStore != null) {
+            mStore.topicUpdate(this);
+        }
+
         if (mListener != null && mListener instanceof MeListener) {
             ((MeListener) mListener).onCredUpdated(creds);
         }
@@ -393,7 +515,7 @@ public class MeTopic<DP> extends Topic<DP,PrivateType,DP,PrivateType> {
     protected void topicLeft(boolean unsub, int code, String reason) {
         super.topicLeft(unsub, code, reason);
 
-        List<Topic> topics = mTinode.getTopics();
+        Collection<Topic> topics = mTinode.getTopics();
         if (topics != null) {
             for (Topic t : topics) {
                 t.setOnline(false);
@@ -404,14 +526,23 @@ public class MeTopic<DP> extends Topic<DP,PrivateType,DP,PrivateType> {
     public static class MeListener<DP> extends Listener<DP,PrivateType,DP,PrivateType> {
         /** {meta} message received */
         public void onMeta(MsgServerMeta<DP,PrivateType,DP,PrivateType> meta) {}
-        /** {meta what="sub"} message received, and this is one of the subs */
-        public void onMetaSub(Subscription<DP,PrivateType> sub) {}
-        /** {meta what="desc"} message received */
-        public void onMetaDesc(Description<DP,PrivateType> desc) {}
-        /** Called by MeTopic when topic descriptor as contact is updated */
-        public void onContUpdated(String contact) {}
         /** Called by MeTopic when credentials are updated */
         public void onCredUpdated(Credential[] cred) {}
     }
 
+    @Override
+    public MetaGetBuilder getMetaGetBuilder() {
+        return new MetaGetBuilder(this);
+    }
+
+    public static class MetaGetBuilder extends Topic.MetaGetBuilder {
+        MetaGetBuilder(MeTopic parent) {
+            super(parent);
+        }
+
+        public MetaGetBuilder withCred() {
+            meta.setCred();
+            return this;
+        }
+    }
 }

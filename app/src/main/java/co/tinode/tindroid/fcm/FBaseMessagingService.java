@@ -9,11 +9,6 @@ import android.graphics.Bitmap;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
-
-import androidx.annotation.NonNull;
-import androidx.core.app.NotificationCompat;
-import androidx.core.content.ContextCompat;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -22,6 +17,10 @@ import com.google.firebase.messaging.RemoteMessage;
 
 import java.util.Map;
 
+import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import co.tinode.tindroid.Cache;
 import co.tinode.tindroid.ChatsActivity;
 import co.tinode.tindroid.MessageActivity;
@@ -102,6 +101,8 @@ public class FBaseMessagingService extends FirebaseMessagingService {
         String topicName = null;
         Bitmap avatar = null;
 
+        final Tinode tinode = Cache.getTinode();
+
         // Check if message contains a data payload.
         if (remoteMessage.getData().size() > 0) {
             Map<String, String> data = remoteMessage.getData();
@@ -127,12 +128,11 @@ public class FBaseMessagingService extends FirebaseMessagingService {
             }
 
             // Try to resolve sender using locally stored contacts.
-            final Tinode tinode = Cache.getTinode();
             String senderId = data.get("xfrom");
             User<VxCard> sender = tinode.getUser(senderId);
             if (sender == null) {
                 // If sender is not found, try to fetch description from the server.
-                Utils.backgroundDescFetch(this, senderId);
+                Utils.backgroundMetaFetch(this, senderId);
                 sender = tinode.getUser(senderId);
             }
 
@@ -202,7 +202,7 @@ public class FBaseMessagingService extends FirebaseMessagingService {
                 }
 
                 // Legitimate subscription to a new topic.
-                Utils.backgroundDescFetch(getApplicationContext(), topicName);
+                Utils.backgroundMetaFetch(getApplicationContext(), topicName);
                 title = getResources().getString(R.string.new_chat);
                 if (tp == Topic.TopicType.P2P) {
                     // P2P message
@@ -268,8 +268,6 @@ public class FBaseMessagingService extends FirebaseMessagingService {
                 PendingIntent.FLAG_ONE_SHOT);
 
         Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-        int icon = (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) ?
-                R.drawable.ic_logo_push : R.mipmap.ic_launcher;
 
         int background = ContextCompat.getColor(this, R.color.colorNotificationBackground);
 
@@ -282,7 +280,7 @@ public class FBaseMessagingService extends FirebaseMessagingService {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-                .setSmallIcon(icon)
+                .setSmallIcon(R.drawable.ic_logo_push)
                 .setLargeIcon(avatar)
                 .setColor(background)
                 .setContentTitle(title)

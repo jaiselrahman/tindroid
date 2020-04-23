@@ -9,6 +9,7 @@ import android.util.Log;
 
 import java.util.Date;
 
+import co.tinode.tinodesdk.MeTopic;
 import co.tinode.tinodesdk.Tinode;
 import co.tinode.tinodesdk.Topic;
 
@@ -106,6 +107,10 @@ public class TopicDb implements BaseColumns {
      */
     public static final String COLUMN_NAME_TAGS = "tags";
     /**
+     * MeTopic credentials, serialized as TEXT.
+     */
+    public static final String COLUMN_NAME_CREDS = "creds";
+    /**
      * Public topic description, serialized as TEXT
      */
     public static final String COLUMN_NAME_PUBLIC = "pub";
@@ -135,8 +140,9 @@ public class TopicDb implements BaseColumns {
     static final int COLUMN_IDX_MAX_LOCAL_SEQ = 17;
     static final int COLUMN_IDX_NEXT_UNSENT_SEQ =18;
     static final int COLUMN_IDX_TAGS = 19;
-    static final int COLUMN_IDX_PUBLIC = 20;
-    static final int COLUMN_IDX_PRIVATE = 21;
+    static final int COLUMN_IDX_CREDS = 20;
+    static final int COLUMN_IDX_PUBLIC = 21;
+    static final int COLUMN_IDX_PRIVATE = 22;
 
     /**
      * SQL statement to create Messages table
@@ -164,6 +170,7 @@ public class TopicDb implements BaseColumns {
                     COLUMN_NAME_MAX_LOCAL_SEQ + " INT," +
                     COLUMN_NAME_NEXT_UNSENT_SEQ + " INT," +
                     COLUMN_NAME_TAGS + " TEXT," +
+                    COLUMN_NAME_CREDS + " TEXT," +
                     COLUMN_NAME_PUBLIC + " TEXT," +
                     COLUMN_NAME_PRIVATE + " TEXT)";
     /**
@@ -217,7 +224,10 @@ public class TopicDb implements BaseColumns {
         values.put(COLUMN_NAME_MAX_DEL, topic.getMaxDel());
         values.put(COLUMN_NAME_ACCESSMODE, BaseDb.serializeMode(topic.getAccessMode()));
         values.put(COLUMN_NAME_DEFACS, BaseDb.serializeDefacs(topic.getDefacs()));
-        values.put(COLUMN_NAME_TAGS, BaseDb.serializeArray(topic.getTags()));
+        values.put(COLUMN_NAME_TAGS, BaseDb.serializeStringArray(topic.getTags()));
+        if (topic instanceof MeTopic) {
+            values.put(COLUMN_NAME_CREDS, BaseDb.serialize(((MeTopic) topic).getCreds()));
+        }
         values.put(COLUMN_NAME_PUBLIC, BaseDb.serialize(topic.getPub()));
         values.put(COLUMN_NAME_PRIVATE, BaseDb.serialize(topic.getPriv()));
 
@@ -238,8 +248,6 @@ public class TopicDb implements BaseColumns {
 
         return id;
     }
-
-
 
     /**
      * Update topic description
@@ -270,7 +278,10 @@ public class TopicDb implements BaseColumns {
         values.put(COLUMN_NAME_CLEAR, topic.getClear());
         values.put(COLUMN_NAME_ACCESSMODE, BaseDb.serializeMode(topic.getAccessMode()));
         values.put(COLUMN_NAME_DEFACS, BaseDb.serializeDefacs(topic.getDefacs()));
-        values.put(COLUMN_NAME_TAGS, BaseDb.serializeArray(topic.getTags()));
+        values.put(COLUMN_NAME_TAGS, BaseDb.serializeStringArray(topic.getTags()));
+        if (topic instanceof MeTopic) {
+            values.put(COLUMN_NAME_CREDS, BaseDb.serialize(((MeTopic) topic).getCreds()));
+        }
         values.put(COLUMN_NAME_PUBLIC, BaseDb.serialize(topic.getPub()));
         values.put(COLUMN_NAME_PRIVATE, BaseDb.serialize(topic.getPriv()));
 
@@ -331,7 +342,7 @@ public class TopicDb implements BaseColumns {
             st.lastUsed = timestamp.after(st.lastUsed) ? timestamp : st.lastUsed;
             st.minLocalSeq = seq > 0 && (st.minLocalSeq == 0 || seq < st.minLocalSeq) ?
                     seq : st.minLocalSeq;
-            st.maxLocalSeq = seq > st.maxLocalSeq ? seq : st.maxLocalSeq;
+            st.maxLocalSeq = Math.max(seq, st.maxLocalSeq);
         }
         return true;
     }
@@ -463,6 +474,25 @@ public class TopicDb implements BaseColumns {
      */
     public static boolean delete(SQLiteDatabase db, long id) {
         return db.delete(TABLE_NAME, _ID + "=" + id, null) > 0;
+    }
+
+    /**
+     * Delete all topics of the given account ID.
+     * Also deletes subscriptions and messages.
+     */
+    static void deleteAll(SQLiteDatabase db, long accId) {
+        // Delete messages.
+        String sql = "DELETE FROM " + MessageDb.TABLE_NAME +
+                " WHERE " + MessageDb.COLUMN_NAME_TOPIC_ID + " IN (" +
+                    "SELECT " + _ID + " FROM " + TABLE_NAME + " WHERE " + COLUMN_NAME_ACCOUNT_ID + "=" + accId +
+                ")";
+        db.execSQL(sql);
+        // Delete subscribers.
+        sql = "DELETE FROM " + SubscriberDb.TABLE_NAME +
+                " WHERE " + SubscriberDb.COLUMN_NAME_TOPIC_ID + " IN (" +
+                    "SELECT " + _ID + " FROM " + TABLE_NAME + " WHERE " + COLUMN_NAME_ACCOUNT_ID + "=" + accId +
+                ")";
+        db.execSQL(sql);
     }
 
     /**

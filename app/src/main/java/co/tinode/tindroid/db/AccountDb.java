@@ -69,7 +69,7 @@ public class AccountDb implements BaseColumns {
             acc = getByUid(db, uid);
             ContentValues values = new ContentValues();
             values.put(COLUMN_NAME_ACTIVE, 1);
-            values.put(COLUMN_NAME_CRED_METHODS, BaseDb.serializeArray(credMethods));
+            values.put(COLUMN_NAME_CRED_METHODS, BaseDb.serializeStringArray(credMethods));
             if (acc != null) {
                 // Account exists, updating active status and list of un-validated methods.
                 db.update(TABLE_NAME, values, _ID + "=" + acc.id, null);
@@ -107,13 +107,24 @@ public class AccountDb implements BaseColumns {
             acc = new StoredAccount();
             acc.id = c.getLong(0);
             acc.uid = c.getString(1);
-            acc.credMethods = BaseDb.deserializeArray(c.getString(2));
+            acc.credMethods = BaseDb.deserializeStringArray(c.getString(2));
         }
         c.close();
         return acc;
     }
 
-    private static StoredAccount getByUid(SQLiteDatabase db, String uid) {
+    // Delete given account.
+    static void delete(SQLiteDatabase db, StoredAccount acc) {
+        TopicDb.deleteAll(db, acc.id);
+        UserDb.deleteAll(db, acc.id);
+        db.delete(TABLE_NAME, _ID + "=" + acc.id, null);
+    }
+
+    static StoredAccount getByUid(SQLiteDatabase db, String uid) {
+        if (uid == null) {
+            return null;
+        }
+
         StoredAccount acc = null;
         Cursor c = db.query(
                 TABLE_NAME,
@@ -126,7 +137,7 @@ public class AccountDb implements BaseColumns {
                 acc = new StoredAccount();
                 acc.id = c.getLong(0);
                 acc.uid = uid;
-                acc.credMethods = BaseDb.deserializeArray(c.getString(1));
+                acc.credMethods = BaseDb.deserializeStringArray(c.getString(1));
             }
             c.close();
         }
@@ -137,6 +148,7 @@ public class AccountDb implements BaseColumns {
         db.execSQL("UPDATE " + TABLE_NAME + " SET " + COLUMN_NAME_ACTIVE + "=0");
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     static boolean updateDeviceToken(SQLiteDatabase db, String token) {
         ContentValues values = new ContentValues();
         values.put(COLUMN_NAME_DEVICE_ID, token);

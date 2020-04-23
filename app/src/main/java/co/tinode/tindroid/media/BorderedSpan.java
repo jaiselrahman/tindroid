@@ -1,14 +1,17 @@
 package co.tinode.tindroid.media;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import androidx.annotation.NonNull;
 import android.text.style.ReplacementSpan;
 
+import androidx.annotation.NonNull;
+
+// Span used to represent clickable buttons in Drafty forms.
 public class BorderedSpan extends ReplacementSpan {
     private static final String TAG = "BorderedSpan";
 
@@ -25,19 +28,21 @@ public class BorderedSpan extends ReplacementSpan {
     private float mDipSize;
 
     BorderedSpan(final Context context, final float charWidth, float dipSize) {
+        int[] attrs = {android.R.attr.textColorPrimary, android.R.attr.colorButtonNormal};
+        TypedArray colors = context.obtainStyledAttributes(attrs);
+        mTextColor = colors.getColor(0, 0x7bc9c2);
+        @SuppressLint("ResourceType")
+        int background = colors.getColor(1, 0xeeeeff);
+        colors.recycle();
+
         mPaintBackground = new Paint();
         mPaintBackground.setStyle(Paint.Style.FILL);
         mPaintBackground.setAntiAlias(true);
-        mPaintBackground.setColor(Color.rgb(0xEE, 0xEE, 0xFF));
+        mPaintBackground.setColor(background);
         mPaintBackground.setShadowLayer(SHADOW_SIZE * dipSize,
                 SHADOW_SIZE * 0.5f * dipSize,
                 SHADOW_SIZE * 0.5f * dipSize,
                 Color.argb(0x80, 0, 0, 0));
-
-        int[] attrs = {android.R.attr.textColorLink};
-        TypedArray colors = context.obtainStyledAttributes(attrs);
-        mTextColor = colors.getColor(0, 0x7bc9c2);
-        colors.recycle();
 
         mMinButtonWidth = (int) (MIN_BUTTON_WIDTH * charWidth / dipSize);
         mDipSize = dipSize;
@@ -53,14 +58,13 @@ public class BorderedSpan extends ReplacementSpan {
         // Add ~2 char padding left and right.
         mWidth = mWidthActual * (len+4) / len;
         // Ensure minimum width of the button.
-        mWidth = mWidth < mMinButtonWidth ? mMinButtonWidth : mWidth;
+        mWidth = Math.max(mWidth, mMinButtonWidth);
         return mWidth;
     }
 
     @Override
     public void draw(@NonNull Canvas canvas, CharSequence text,
                      int start, int end, float x, int top, int y, int bottom, @NonNull Paint paint) {
-        float textHeight = paint.descent() - paint.ascent();
         RectF outline = new RectF(x, top, x + mWidth, bottom);
         outline.inset(SHADOW_SIZE * mDipSize, SHADOW_SIZE * mDipSize);
         // Draw colored background

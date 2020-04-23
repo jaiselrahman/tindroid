@@ -1,11 +1,10 @@
-<androidx.core.widget.NestedScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:descendantFocusability="afterDescendants"
     android:layout_margin="@dimen/activity_default_margin"
+    android:descendantFocusability="afterDescendants"
     tools:context=".TopicInfoFragment">
 
     <LinearLayout
@@ -26,7 +25,7 @@
                 android:clickable="true"
                 android:contentDescription="@string/avatar"
                 android:focusable="true"
-                app:srcCompat="@drawable/ic_group_grey"/>
+                app:srcCompat="@drawable/ic_group_grey" />
 
             <Button
                 android:id="@+id/uploadAvatar"
@@ -38,7 +37,7 @@
                 android:background="@drawable/pill_counter"
                 android:gravity="center"
                 android:paddingTop="10dp"
-                app:drawableTopCompat="@drawable/ic_add_a_photo"/>
+                app:drawableTopCompat="@drawable/ic_add_a_photo" />
 
             <TextView
                 android:id="@+id/topicTitle"
@@ -47,58 +46,73 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentTop="true"
                 android:layout_toStartOf="@id/imageAvatar"
+                android:ellipsize="end"
                 android:clickable="true"
                 android:focusable="true"
+                android:focusableInTouchMode="true"
                 android:maxLines="2"
                 android:textIsSelectable="false"
-                tools:text="Topic title (public)"/>
+                android:layout_marginBottom="@dimen/activity_padding"
+                android:background="@drawable/dotted_line"
+                tools:text="Topic title (public)" />
 
             <TextView
                 android:id="@+id/topicSubtitle"
                 style="@style/textSecondary"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/topicTitle"
-                android:clickable="true"
                 android:ellipsize="end"
+                android:clickable="true"
                 android:focusable="true"
-                android:maxLines="1"
+                android:focusableInTouchMode="true"
+                android:lines="1"
+                android:singleLine="true"
                 android:textIsSelectable="false"
-                tools:text="Topic subtitle (private)"/>
+                android:layout_marginBottom="@dimen/activity_padding"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@id/imageAvatar"
+                android:background="@drawable/dotted_line"
+                tools:text="Topic subtitle (private)" />
 
             <LinearLayout
                 android:id="@+id/topicAddressWrapper"
-                android:layout_below="@id/imageAvatar"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/topicSubtitle"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@id/imageAvatar">
 
                 <TextView
-                    style="@style/textPrimary"
-                    android:layout_width="0dp"
+                    style="@style/textSecondary"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/address"/>
+                    android:paddingEnd="8dp"
+                    android:text="@string/id"
+                    tools:ignore="RtlSymmetry" />
 
                 <TextView
                     android:id="@+id/topicAddress"
-                    style="@style/textPrimarySmall"
+                    style="@style/textSecondary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:ellipsize="end"
                     android:fontFamily="monospace"
+                    android:lines="1"
+                    android:singleLine="true"
                     android:textIsSelectable="true"
                     android:typeface="monospace"
-                    tools:text="p2p__fv2qrUr6vAdVURkv6q3w"/>
+                    tools:text="p2p__fv2qrUr6vAdVURkv6q3w" />
             </LinearLayout>
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:layout_marginBottom="@dimen/activity_padding"
-                android:layout_marginTop="@dimen/activity_padding"
-                android:layout_below="@id/topicAddressWrapper"
-                android:background="@color/grey" />
-
         </RelativeLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0.5dp"
+            android:layout_marginTop="@dimen/activity_padding"
+            android:layout_marginBottom="@dimen/activity_padding"
+            android:background="@color/grey" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -110,13 +124,13 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
                 android:layout_weight="1"
-                android:text="@string/topic_muted"/>
+                android:text="@string/topic_muted" />
 
             <Switch
                 android:id="@+id/switchMuted"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_margin="4dp"/>
+                android:layout_margin="4dp" />
 
         </LinearLayout>
 
@@ -130,247 +144,184 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
                 android:layout_weight="1"
-                android:text="@string/topic_archived"/>
+                android:text="@string/topic_archived" />
 
             <Switch
                 android:id="@+id/switchArchived"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_margin="4dp"/>
+                android:layout_margin="4dp" />
 
         </LinearLayout>
 
         <View
             android:layout_width="match_parent"
             android:layout_height="0.5dp"
-            android:layout_marginBottom="@dimen/activity_padding"
             android:layout_marginTop="@dimen/activity_padding"
+            android:layout_marginBottom="@dimen/activity_padding"
             android:background="@color/grey" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
-
-            <LinearLayout
-                android:id="@+id/singleUserPermissions"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    style="@style/textPrimary"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/permissions"/>
-
-                <TextView
-                    android:id="@+id/permissions"
-                    style="@style/textPrimarySmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/dotted_line"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:focusableInTouchMode="false"
-                    android:fontFamily="monospace"
-                    android:textIsSelectable="false"
-                    android:typeface="monospace"
-                    tools:text="RWPD"/>
-            </LinearLayout>
-
-            <RelativeLayout
-                android:id="@+id/p2pPermissions"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    style="@style/sectionTitleStyle"
-                    android:id="@+id/permissionTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/permissions"
-                    tools:text="Permissions"/>
-
-                <TextView
-                    style="@style/textPrimary"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@id/permissionTitle"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/your_permissions"/>
-
-                <TextView
-                    android:id="@+id/userOne"
-                    style="@style/textPrimarySmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@id/permissionTitle"
-                    android:layout_alignParentEnd="true"
-                    android:background="@drawable/dotted_line"
-                    android:layout_marginTop="4dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:focusableInTouchMode="false"
-                    android:fontFamily="monospace"
-                    android:textIsSelectable="false"
-                    android:typeface="monospace"
-                    tools:text="RWPD"/>
-
-                <TextView
-                    android:id="@+id/userTwoLabel"
-                    style="@style/textPrimary"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@id/userOne"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginTop="4dp"
-                    android:text=""
-                    tools:text="John Doe"/>
-
-                <TextView
-                    android:id="@+id/userTwo"
-                    style="@style/textPrimarySmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@id/userOne"
-                    android:layout_alignParentEnd="true"
-                    android:background="@drawable/dotted_line"
-                    android:layout_marginTop="4dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:focusableInTouchMode="false"
-                    android:fontFamily="monospace"
-                    android:textIsSelectable="false"
-                    android:typeface="monospace"
-                    tools:text="RWPD"/>
-            </RelativeLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:layout_marginBottom="@dimen/activity_padding"
-                android:layout_marginTop="@dimen/activity_padding"
-                android:background="@color/grey" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/tagsManagerWrapper"
+        <RelativeLayout
+            android:id="@+id/permissions"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:clickable="true"
+            android:gravity="center_vertical"
+            android:minHeight="?attr/listPreferredItemHeight"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/icon_security"
+                android:layout_width="@dimen/settings_icon_size"
+                android:layout_height="@dimen/settings_icon_size"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:src="@drawable/ic_key"
+                android:tint="@color/colorAccent"
+                android:contentDescription="@string/permissions" />
 
             <TextView
-                style="@style/sectionTitleStyle"
+                android:id="@+id/security_text"
+                style="?android:textAppearanceLarge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/tags_management"/>
+                android:layout_marginStart="16dp"
+                android:layout_toEndOf="@id/icon_security"
+                android:text="@string/permissions" />
 
-            <Button
-                android:id="@+id/buttonManageTags"
-                style="?attr/buttonBarButtonStyle"
+            <TextView
+                style="?android:textAppearanceMedium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:contentDescription="@string/manage"
-                android:drawablePadding="4sp"
-                android:text="@string/manage"
-                android:textColor="@color/colorTextPrimary"
-                app:drawableStartCompat="@drawable/ic_edit_black"/>
-
-            <com.google.android.flexbox.FlexboxLayout
-                android:id="@+id/tagList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:flexWrap="wrap"
-                app:alignItems="flex_start"
-                app:alignContent="flex_start" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:layout_marginTop="@dimen/activity_padding"
-                android:layout_marginBottom="@dimen/activity_padding"
-                android:background="@color/grey"/>
-
-        </LinearLayout>
+                android:layout_below="@id/security_text"
+                android:layout_marginStart="16dp"
+                android:layout_toEndOf="@id/icon_security"
+                android:text="@string/permissions_explained" />
+        </RelativeLayout>
 
         <LinearLayout
+            android:id="@+id/singleUserPermissions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/activity_padding"
+            android:layout_marginBottom="@dimen/activity_padding"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/textPrimary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/permissions"/>
+
+            <TextView
+                android:id="@+id/permissionsSingle"
+                android:textAppearance="?android:textAppearanceMedium"
+                android:textColor="?android:textColorPrimary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/dotted_line"
+                android:clickable="true"
+                android:focusable="true"
+                android:focusableInTouchMode="false"
+                android:fontFamily="monospace"
+                android:textIsSelectable="false"
+                android:typeface="monospace"
+                tools:text="RWPD"/>
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0.5dp"
+            android:layout_marginTop="@dimen/activity_padding"
+            android:layout_marginBottom="@dimen/activity_padding"
+            android:background="@color/grey" />
+
+        <Button
+            android:id="@+id/buttonClearMessages"
+            style="?attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawablePadding="4dp"
+            android:drawableTint="?android:textColorPrimary"
+            android:text="@string/clear_messages"
+            android:textColor="?android:textColorPrimary"
+            app:drawableStartCompat="@drawable/ic_delete" />
+
+        <Button
+            android:id="@+id/buttonLeave"
+            style="?attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawablePadding="4dp"
+            android:drawableTint="?android:textColorPrimary"
+            android:text="@string/leave_conversation"
+            android:textColor="?android:textColorPrimary"
+            app:drawableStartCompat="@drawable/ic_exit" />
+
+        <Button
+            android:id="@+id/buttonDeleteGroup"
+            style="?attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawablePadding="4dp"
+            android:drawableTint="@color/colorDanger"
+            android:text="@string/delete_group"
+            android:textColor="@color/colorDanger"
+            app:drawableStartCompat="@drawable/ic_delete_red" />
+
+        <Button
+            android:id="@+id/buttonBlock"
+            style="?attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawablePadding="4dp"
+            android:drawableTint="@color/colorDanger"
+            android:text="@string/block_contact"
+            android:textColor="@color/colorDanger"
+            app:drawableStartCompat="@drawable/ic_block_red" />
+
+        <Button
+            android:id="@+id/buttonReportContact"
+            style="?attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawablePadding="4dp"
+            android:drawableTint="@color/colorDanger"
+            android:text="@string/report_contact"
+            android:textColor="@color/colorDanger"
+            app:drawableStartCompat="@drawable/ic_report_red" />
+
+        <Button
+            android:id="@+id/buttonReportGroup"
+            style="?attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawablePadding="4dp"
+            android:drawableTint="@color/colorDanger"
+            android:text="@string/report_group"
+            android:textColor="@color/colorDanger"
+            app:drawableStartCompat="@drawable/ic_report_red" />
+
+        <LinearLayout
+            android:id="@+id/groupMembersWrapper"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <Button
-                android:id="@+id/buttonClearMessages"
-                style="?attr/buttonBarButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:drawablePadding="4sp"
-                android:text="@string/clear_messages"
-                android:textColor="@color/colorTextPrimary"
-                app:drawableStartCompat="@drawable/ic_delete"/>
-
-            <Button
-                android:id="@+id/buttonLeave"
-                style="?attr/buttonBarButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:drawablePadding="4sp"
-                android:text="@string/leave_conversation"
-                android:textColor="@color/colorDangerDark"
-                app:drawableStartCompat="@drawable/ic_exit_red"/>
-
-            <Button
-                android:id="@+id/buttonBlock"
-                style="?attr/buttonBarButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:drawablePadding="4sp"
-                android:text="@string/block_contact"
-                android:textColor="@color/colorDangerDark"
-                app:drawableStartCompat="@drawable/ic_block_red"/>
-
-            <Button
-                android:id="@+id/buttonReportContact"
-                style="?attr/buttonBarButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:drawablePadding="4sp"
-                android:text="@string/report_contact"
-                android:textColor="@color/colorDangerDark"
-                app:drawableStartCompat="@drawable/ic_report_red"/>
-
-            <Button
-                android:id="@+id/buttonReportGroup"
-                style="?attr/buttonBarButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:drawablePadding="4sp"
-                android:text="@string/report_group"
-                android:textColor="@color/colorDangerDark"
-                app:drawableStartCompat="@drawable/ic_report_red"/>
-
             <View
                 android:layout_width="match_parent"
                 android:layout_height="0.5dp"
                 android:layout_marginTop="@dimen/activity_padding"
                 android:layout_marginBottom="@dimen/activity_padding"
-                android:background="@color/grey"/>
-        </LinearLayout>
-
-        <RelativeLayout
-            android:id="@+id/groupMembersWrapper"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+                android:background="@color/grey" />
 
             <TextView
                 android:id="@+id/membersTitle"
                 style="@style/sectionTitleStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/group_members"
-                />
+                android:text="@string/group_members" />
 
             <Button
                 android:id="@+id/buttonAddMembers"
@@ -380,86 +331,16 @@
                 android:layout_below="@id/membersTitle"
                 android:contentDescription="@string/manage_members"
                 android:drawablePadding="4sp"
+                android:drawableTint="?android:textColorPrimary"
                 android:text="@string/add_members"
-                android:textColor="@color/colorTextPrimary"
-                app:drawableStartCompat="@drawable/ic_person_add"/>
+                android:textColor="?android:textColorPrimary"
+                app:drawableStartCompat="@drawable/ic_person_add" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/groupMembers"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/buttonAddMembers"/>
-
-        </RelativeLayout>
-
-        <LinearLayout
-            android:id="@+id/defaultPermissionsWrapper"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
-
-            <TextView
-                style="@style/sectionTitleStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/default_permissions"
-                />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    style="@style/textPrimary"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
-                    android:text="@string/auth_permissions"/>
-
-                <TextView
-                    android:id="@+id/authPermissions"
-                    style="@style/textPrimarySmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/dotted_line"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:focusableInTouchMode="false"
-                    android:fontFamily="monospace"
-                    android:textIsSelectable="false"
-                    android:typeface="monospace"
-                    tools:text="RWPD"/>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    style="@style/textPrimary"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
-                    android:text="@string/anon_permissions"/>
-
-                <TextView
-                    android:id="@+id/anonPermissions"
-                    style="@style/textPrimarySmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/dotted_line"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:focusableInTouchMode="false"
-                    android:fontFamily="monospace"
-                    android:textIsSelectable="false"
-                    android:typeface="monospace"
-                    tools:text="RWPD"/>
-
-            </LinearLayout>
+                android:layout_below="@id/buttonAddMembers" />
 
         </LinearLayout>
 

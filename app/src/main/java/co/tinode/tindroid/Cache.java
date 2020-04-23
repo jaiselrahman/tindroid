@@ -55,7 +55,9 @@ public class Cache {
                 .addOnSuccessListener(new OnSuccessListener<InstanceIdResult>() {
                     @Override
                     public void onSuccess(InstanceIdResult instanceIdResult) {
-                        sTinode.setDeviceToken(instanceIdResult.getToken());
+                        if (sTinode != null) {
+                            sTinode.setDeviceToken(instanceIdResult.getToken());
+                        }
                     }
                 });
         }
@@ -81,21 +83,25 @@ public class Cache {
 
     // Connect to 'me' topic.
     @SuppressWarnings("unchecked")
-    static PromisedReply<ServerMessage> attachMeTopic(MeTopic.MeListener l) {
+    public static PromisedReply<ServerMessage> attachMeTopic(MeTopic.MeListener l, boolean inBackgrund) {
         final MeTopic<VxCard> me = getTinode().getOrCreateMeTopic();
         me.setListener(l);
 
         if (!me.isAttached()) {
             return me.subscribe(null, me
                     .getMetaGetBuilder()
+                    .withCred()
                     .withDesc()
                     .withSub()
                     .withTags()
-                    .withCred()
-                    .build());
+                    .build(), inBackgrund);
         } else {
             return new PromisedReply<>((ServerMessage) null);
         }
+    }
+
+    static PromisedReply<ServerMessage> attachMeTopic(MeTopic.MeListener l) {
+        return attachMeTopic(l, false);
     }
 
     static PromisedReply<ServerMessage> attachFndTopic(FndTopic.FndListener<VxCard> l) {

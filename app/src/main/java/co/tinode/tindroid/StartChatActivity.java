@@ -3,19 +3,18 @@ package co.tinode.tindroid;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatDelegate;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentStatePagerAdapter;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import androidx.viewpager.widget.ViewPager;
-
 import android.view.View;
 
 import com.google.android.material.tabs.TabLayout;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentStatePagerAdapter;
+import androidx.viewpager.widget.ViewPager;
 
 /**
  * View to display a single conversation
@@ -32,11 +31,6 @@ public class StartChatActivity extends AppCompatActivity {
 
     // Limit the number of times permissions are requested per session.
     private boolean mReadContactsPermissionsAlreadyRequested = false;
-
-    static {
-        // Otherwise crash on pre-Lollipop (API < 21)
-        AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,6 +82,7 @@ public class StartChatActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == UiUtils.READ_EXTERNAL_STORAGE_PERMISSION) {
             // If request is cancelled, the result arrays are empty.
             if (grantResults.length > 0
@@ -97,6 +92,7 @@ public class StartChatActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     boolean isReadContactsPermissionRequested() {
         return mReadContactsPermissionsAlreadyRequested;
     }
@@ -105,7 +101,7 @@ public class StartChatActivity extends AppCompatActivity {
         mReadContactsPermissionsAlreadyRequested = true;
     }
 
-    private class PagerAdapter extends FragmentStatePagerAdapter {
+    private static class PagerAdapter extends FragmentStatePagerAdapter {
         Fragment mSearch;
         Fragment mCreateGroup;
         Fragment mById;

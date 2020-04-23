@@ -2,13 +2,13 @@ package co.tinode.tindroid;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.google.android.flexbox.FlexDirection;
@@ -25,7 +25,6 @@ import androidx.loader.app.LoaderManager;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import co.tinode.tindroid.media.VxCard;
 import co.tinode.tinodesdk.ComTopic;
 import co.tinode.tinodesdk.NotConnectedException;
@@ -177,7 +176,8 @@ public class EditMembersFragment extends Fragment {
         if (UiUtils.isPermissionGranted(activity, Manifest.permission.READ_CONTACTS)) {
             LoaderManager.getInstance(activity).restartLoader(LOADER_ID, null, mContactsLoaderCallback);
         } else {
-            requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, UiUtils.READ_CONTACTS_PERMISSION);
+            requestPermissions(new String[]{Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS},
+                    UiUtils.CONTACTS_PERMISSION_ID);
         }
     }
 
@@ -198,6 +198,24 @@ public class EditMembersFragment extends Fragment {
         } catch (Exception ex) {
             Log.w(TAG, "Failed to change member's status", ex);
             Toast.makeText(activity, R.string.action_failed, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == UiUtils.CONTACTS_PERMISSION_ID) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Sync p2p topics to Contacts.
+                Activity activity = getActivity();
+                if (activity == null) {
+                    return;
+                }
+                UiUtils.onContactsPermissionsGranted(activity);
+                // Permission is granted
+                restartLoader();
+            }
         }
     }
 }

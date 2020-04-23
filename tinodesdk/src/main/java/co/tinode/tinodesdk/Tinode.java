@@ -55,8 +55,8 @@ import co.tinode.tinodesdk.model.MsgClientNote;
 import co.tinode.tinodesdk.model.MsgClientPub;
 import co.tinode.tinodesdk.model.MsgClientSet;
 import co.tinode.tinodesdk.model.MsgClientSub;
-import co.tinode.tinodesdk.model.MsgRange;
 import co.tinode.tinodesdk.model.MsgGetMeta;
+import co.tinode.tinodesdk.model.MsgRange;
 import co.tinode.tinodesdk.model.MsgServerCtrl;
 import co.tinode.tinodesdk.model.MsgServerData;
 import co.tinode.tinodesdk.model.MsgServerInfo;
@@ -275,7 +275,23 @@ public class Tinode {
     public static <T> T jsonDeserialize(String input, String canonicalName) {
         try {
             return sJsonMapper.readValue(input, sTypeFactory.constructFromCanonical(canonicalName));
-        } catch (IOException e) {
+        } catch (IllegalArgumentException | IOException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Convert JSON to an array of objects. Exported for convenience.
+     *
+     * @param input         JSON string to parse
+     * @param canonicalName name of the base class to use as elements of array.
+     * @return converted array of objects.
+     */
+    public static <T> T[] jsonDeserializeArray(String input, String canonicalName) {
+        try {
+            return sJsonMapper.readValue(input, sTypeFactory.constructArrayType(
+                            sTypeFactory.constructFromCanonical(canonicalName)));
+        } catch (IllegalArgumentException | IOException e) {
             return null;
         }
     }
@@ -356,8 +372,21 @@ public class Tinode {
         }
     }
 
-    Date getTopicsUpdated() {
+    /**
+     * Get the most recent timestamp of update to any topic.
+     *
+     * @return timestamp of the last update to any topic.
+     */
+    public Date getTopicsUpdated() {
         return mTopicsUpdated;
+    }
+
+    /**
+     * Set server address and TLS status to be used in subsequent connections.
+     */
+    public void setServer(String host, boolean tls) {
+        mServerHost = host != null ? host.toLowerCase() : null;
+        mUseTLS = tls;
     }
 
     /**
@@ -375,7 +404,7 @@ public class Tinode {
             hostName = hostName.toLowerCase();
             // Check if host address has changed.
             newHost = !hostName.equals(mServerHost) || tls != mUseTLS;
-            // Save updated host name & security.
+            // Save updated host name & TLS setting.
             mServerHost = hostName;
             mUseTLS = tls;
         }
@@ -642,7 +671,8 @@ public class Tinode {
             if (pkt.ctrl.id != null) {
                 FutureHolder fh = mFutures.remove(pkt.ctrl.id);
                 if (fh != null) {
-                    if (pkt.ctrl.code >= 200 && pkt.ctrl.code < 400) {
+                    if (pkt.ctrl.code >= ServerMessage.STATUS_OK &&
+                            pkt.ctrl.code < ServerMessage.STATUS_BAD_REQUEST) {
                         fh.future.resolve(pkt);
                     } else {
                         fh.future.reject(new ServerResponseException(pkt.ctrl.code, pkt.ctrl.text,
@@ -652,7 +682,8 @@ public class Tinode {
             }
             Topic topic = getTopic(pkt.ctrl.topic);
             if (topic != null) {
-                if (pkt.ctrl.code == 205 && "evicted".equals(pkt.ctrl.text)) {
+                if (pkt.ctrl.code == ServerMessage.STATUS_RESET_CONTENT
+                        && "evicted".equals(pkt.ctrl.text)) {
                     boolean unsub = pkt.ctrl.getBoolParam("unsub", false);
                     topic.topicLeft(unsub, pkt.ctrl.code, pkt.ctrl.text);
                 } else {
@@ -945,6 +976,10 @@ public class Tinode {
      * @param token device token; to delete token pass NULL_VALUE
      */
     public PromisedReply<ServerMessage> setDeviceToken(final String token) {
+        if (!isAuthenticated()) {
+            // Don't send a message if the client is not logged in.
+            return new PromisedReply<>(new AuthenticationRequiredException());
+        }
         // If token is not initialized, try to read one from storage.
         if (mDeviceToken == null && mStore != null) {
             mDeviceToken = mStore.getDeviceToken();
@@ -1174,10 +1209,12 @@ public class Tinode {
 
         String newUid = ctrl.getStringParam("user", null);
         if (mMyUid != null && !mMyUid.equals(newUid)) {
+            // logout() clears mMyUid. Save it for the exception below;
+            String oldMyUid = mMyUid;
             logout();
-            mNotifier.onLogin(400, "UID mismatch");
+            mNotifier.onLogin(ServerMessage.STATUS_BAD_REQUEST, "UID mismatch");
 
-            throw new IllegalStateException("UID mismatch: received '" + newUid + "', expected '" + mMyUid + "'");
+            throw new IllegalStateException("UID mismatch: received '" + newUid + "', expected '" + oldMyUid + "'");
         }
 
         mMyUid = newUid;
@@ -1197,7 +1234,7 @@ public class Tinode {
             mAuthTokenExpires = null;
         }
 
-        if (ctrl.code < 300) {
+        if (ctrl.code < ServerMessage.STATUS_MULTIPLE_CHOICES) {
             mConnAuth = true;
             setAutoLoginToken(mAuthToken);
             mNotifier.onLogin(ctrl.code, ctrl.text);
@@ -1266,7 +1303,7 @@ public class Tinode {
                         if (err instanceof ServerResponseException) {
                             ServerResponseException sre = (ServerResponseException) err;
                             final int code = sre.getCode();
-                            if (code == 401) {
+                            if (code == ServerMessage.STATUS_UNAUTHORIZED) {
                                 mLoginCredentials = null;
                                 mAuthToken = null;
                                 mAuthTokenExpires = null;
@@ -1454,7 +1491,7 @@ public class Tinode {
     }
 
     /**
-     * Low-level request to delete messages from a topic. Use {@link Topic#delMessages(List, boolean)} instead.
+     * Low-level request to delete messages from a topic. Use {@link Topic#delMessages(MsgRange[], boolean)} instead.
      *
      * @param topicName name of the topic to inform
      * @param ranges    delete all messages with ids these ranges
@@ -1465,7 +1502,7 @@ public class Tinode {
     }
 
     /**
-     * Low-level request to delete one message from a topic. Use {@link Topic#delMessages(List, boolean)} instead.
+     * Low-level request to delete one message from a topic. Use {@link Topic#delMessages(MsgRange[], boolean)} instead.
      *
      * @param topicName name of the topic to inform
      * @param seqId     seqID of the message to delete.
@@ -1476,14 +1513,16 @@ public class Tinode {
     }
 
     /**
-     * Low-level request to delete topic. Use {@link Topic#delete()} instead.
+     * Low-level request to delete topic. Use {@link Topic#delete(boolean)} instead.
      *
      * @param topicName name of the topic to delete
+     * @param hard hard-delete topic.
      * @return PromisedReply of the reply ctrl message
      */
     @SuppressWarnings("WeakerAccess")
-    public PromisedReply<ServerMessage> delTopic(final String topicName) {
+    public PromisedReply<ServerMessage> delTopic(final String topicName, boolean hard) {
         ClientMessage msg = new ClientMessage(new MsgClientDel(getNextId(), topicName));
+        msg.del.hard = hard;
         return sendWithPromise(msg, msg.del.id);
     }
 
@@ -1510,6 +1549,29 @@ public class Tinode {
     public PromisedReply<ServerMessage> delCredential(final Credential cred) {
         ClientMessage msg = new ClientMessage(new MsgClientDel(getNextId(), cred));
         return sendWithPromise(msg, msg.del.id);
+    }
+
+    /**
+     * Request to delete account of the current user.
+     *
+     * @param hard hard-delete
+     * @return PromisedReply of the reply ctrl message
+     */
+    @SuppressWarnings("UnusedReturnValue")
+    public PromisedReply<ServerMessage> delCurrentUser(boolean hard) {
+        ClientMessage msg = new ClientMessage(new MsgClientDel(getNextId()));
+        msg.del.hard = hard;
+        return sendWithPromise(msg, msg.del.id).thenApply(new PromisedReply.SuccessListener<ServerMessage>() {
+            @Override
+            public PromisedReply<ServerMessage> onSuccess(ServerMessage result) {
+                disconnect();
+                if (mStore != null) {
+                    mStore.deleteAccount(mMyUid);
+                }
+                mMyUid = null;
+                return null;
+            }
+        });
     }
 
     /**
@@ -1684,7 +1746,7 @@ public class Tinode {
      * @return a {@link List} of topics
      */
     @SuppressWarnings("unchecked")
-    public List<Topic> getTopics() {
+    public Collection<Topic> getTopics() {
         List<Topic> result = new ArrayList<>(mTopics.values());
         Collections.sort(result);
         return result;
@@ -1698,9 +1760,9 @@ public class Tinode {
      * @return a {@link List} of topics
      */
     @SuppressWarnings("unchecked")
-    public <T extends Topic> List<T> getFilteredTopics(TopicFilter filter) {
+    public <T extends Topic> Collection<T> getFilteredTopics(TopicFilter filter) {
         if (filter == null) {
-            return (List<T>) getTopics();
+            return (Collection<T>) getTopics();
         }
         ArrayList<T> result = new ArrayList<>();
         for (T t : (Collection<T>) mTopics.values()) {
@@ -1920,6 +1982,7 @@ public class Tinode {
      * Callback interface called by Connection when it receives events from the websocket.
      * Default no-op method implementations are provided for convenience.
      */
+    @SuppressWarnings("EmptyMethod")
     public static class EventListener {
         /**
          * Connection established successfully, handshakes exchanged. The connection is ready for
@@ -1945,7 +2008,7 @@ public class Tinode {
         /**
          * Result of successful or unsuccessful {@link #login} attempt.
          *
-         * @param code a numeric value between 200 and 2999 on success, 400 or higher on failure
+         * @param code a numeric value between 200 and 299 on success, 400 or higher on failure
          * @param text "OK" on success or error message
          */
         @SuppressWarnings("unused")
@@ -2019,7 +2082,7 @@ public class Tinode {
     }
 
     // Helper class which calls given method of all added EventListener(s).
-    private class ListenerNotifier {
+    private static class ListenerNotifier {
         private Vector<EventListener> listeners;
 
         ListenerNotifier() {

@@ -6,11 +6,9 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import java.io.Closeable;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import co.tinode.tinodesdk.Storage;
@@ -53,6 +51,11 @@ public class SqlStore implements Storage {
     }
 
     @Override
+    public void deleteAccount(String uid) {
+        mDbh.deleteUid(uid);
+    }
+
+    @Override
     public String getDeviceToken() {
         return AccountDb.getDeviceToken(mDbh.getReadableDatabase());
     }
@@ -72,7 +75,7 @@ public class SqlStore implements Storage {
     }
 
     public void logout() {
-        mDbh.logout();
+        mDbh.setUid(null, null);
     }
 
     @Override

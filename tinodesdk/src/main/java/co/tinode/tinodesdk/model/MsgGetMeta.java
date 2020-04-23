@@ -3,6 +3,7 @@ package co.tinode.tinodesdk.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,7 +14,7 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT;
  * Topic metadata request.
  */
 @JsonInclude(NON_DEFAULT)
-public class MsgGetMeta {
+public class MsgGetMeta implements Serializable {
     private static final int DESC_SET = 0x01;
     private static final int SUB_SET = 0x02;
     private static final int DATA_SET = 0x04;
@@ -55,7 +56,7 @@ public class MsgGetMeta {
         this.data = data;
         this.del = del;
         if (tags != null && tags) {
-            this.mSet |= TAGS_SET;
+            this.mSet = TAGS_SET;
         }
         if (cred != null && cred) {
             this.mSet |= CRED_SET;

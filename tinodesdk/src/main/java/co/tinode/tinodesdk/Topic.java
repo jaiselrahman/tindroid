@@ -16,15 +16,14 @@ import java.util.Map;
 import co.tinode.tinodesdk.model.AccessChange;
 import co.tinode.tinodesdk.model.Acs;
 import co.tinode.tinodesdk.model.AcsHelper;
-import co.tinode.tinodesdk.model.Credential;
 import co.tinode.tinodesdk.model.Defacs;
 import co.tinode.tinodesdk.model.Description;
 import co.tinode.tinodesdk.model.Drafty;
 import co.tinode.tinodesdk.model.LastSeen;
 import co.tinode.tinodesdk.model.MetaSetDesc;
 import co.tinode.tinodesdk.model.MetaSetSub;
-import co.tinode.tinodesdk.model.MsgRange;
 import co.tinode.tinodesdk.model.MsgGetMeta;
+import co.tinode.tinodesdk.model.MsgRange;
 import co.tinode.tinodesdk.model.MsgServerCtrl;
 import co.tinode.tinodesdk.model.MsgServerData;
 import co.tinode.tinodesdk.model.MsgServerInfo;
@@ -146,6 +145,8 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
         if (name != null) {
             if (name.equals(Tinode.TOPIC_ME)) {
                 return TopicType.ME;
+            } else if (name.equals(Tinode.TOPIC_SYS)) {
+                return TopicType.SYS;
             } else if (name.equals(Tinode.TOPIC_FND)) {
                 return TopicType.FND;
             } else if (name.startsWith(Tinode.TOPIC_GRP_PREFIX) || name.startsWith(Tinode.TOPIC_NEW)) {
@@ -349,10 +350,6 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
             if (mListener != null) {
                 mListener.onMetaTags(mTags);
             }
-        }
-
-        if (meta.cred != null && this instanceof MeTopic) {
-            this.routeMetaCred(meta.cred);
         }
     }
 
@@ -627,6 +624,10 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
         return mDesc.acs != null && mDesc.acs.isJoiner();
     }
 
+    public boolean isDeleter() {
+        return mDesc.acs != null && mDesc.acs.isDeleter();
+    }
+
     public Defacs getDefacs() {
         return mDesc.defacs;
     }
@@ -658,7 +659,7 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
 
     public int getUnreadCount() {
         int unread = mDesc.seq - mDesc.read;
-        return unread > 0 ? unread : 0;
+        return Math.max(unread, 0);
     }
 
     public boolean getOnline() {
@@ -796,7 +797,8 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
                     public PromisedReply<ServerMessage> onFailure(Exception err) throws Exception {
                         if (isNew() && err instanceof ServerResponseException) {
                             ServerResponseException sre = (ServerResponseException) err;
-                            if (sre.getCode() >= 400 && sre.getCode() < 500) {
+                            if (sre.getCode() >= ServerMessage.STATUS_BAD_REQUEST &&
+                                    sre.getCode() < ServerMessage.STATUS_INTERNAL_SERVER_ERROR) {
                                 mTinode.stopTrackingTopic(topicName);
                                 persist(false);
                             }
@@ -1086,12 +1088,19 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
     }
 
     /**
+     * Update own access mode.
+     *
+     * @param update string which defines the update. It could be a full value or a change.
+     */
+    public PromisedReply<ServerMessage> updateMode(final String update) {
+        return updateMode(null, update);
+    }
+
+    /**
      * Update another user's access mode.
      *
-     * @param uid    UID of the user to update or null to update current user.
+     * @param uid    UID of the user to update.
      * @param update string which defines the update. It could be a full value or a change.
-     * @throws NotSubscribedException if the client is not subscribed to the topic
-     * @throws NotConnectedException  if there is no connection to the server
      */
     public PromisedReply<ServerMessage> updateMode(String uid, final String update) {
         final Subscription sub;
@@ -1123,8 +1132,6 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
      *
      * @param uid  ID of the user to invite to topic
      * @param mode access mode granted to user
-     * @throws NotConnectedException    if there is no connection to the server
-     * @throws NotSynchronizedException if the topic has not yet been synchronized with the server
      */
     public PromisedReply<ServerMessage> invite(String uid, String mode) {
 
@@ -1297,10 +1304,12 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
 
     /**
      * Delete topic
+     *
+     * @param hard hard-delete topic.
      */
-    public PromisedReply<ServerMessage> delete() {
+    public PromisedReply<ServerMessage> delete(boolean hard) {
         // Delete works even if the topic is not attached.
-        return mTinode.delTopic(getName()).thenApply(
+        return mTinode.delTopic(getName(), hard).thenApply(
                 new PromisedReply.SuccessListener<ServerMessage>() {
                     @Override
                     public PromisedReply<ServerMessage> onSuccess(ServerMessage result) {
@@ -1362,6 +1371,7 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
         return noteRead(false, -1);
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public int noteRead(int seq) {
         return noteRead(false, seq);
     }
@@ -1584,9 +1594,7 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
         if (meta.tags != null) {
             routeMetaTags(meta.tags);
         }
-        if (meta.cred != null) {
-            routeMetaCred(meta.cred);
-        }
+
         if (mListener != null) {
             mListener.onMeta(meta);
         }
@@ -1680,14 +1688,6 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
         if (mListener != null) {
             mListener.onMetaTags(tags);
         }
-    }
-
-    protected void routeMetaCred(Credential[] cred) {
-        // Do nothing. All processing is not in MeTopic in an overridden method.
-    }
-
-    protected void routeMetaCred(Credential cred) {
-        // Do nothing. All processing is not in MeTopic in an overridden method.
     }
 
     protected void routeData(MsgServerData data) {
@@ -1837,8 +1837,8 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
     }
 
     public enum TopicType {
-        ME(0x01), FND(0x02), GRP(0x04), P2P(0x08),
-        USER(0x04 | 0x08), SYSTEM(0x01 | 0x02), UNKNOWN(0x00),
+        ME(0x01), FND(0x02), GRP(0x04), P2P(0x08), SYS(0x10),
+        USER(0x04 | 0x08), INTERNAL(0x01 | 0x02 | 0x10), UNKNOWN(0x00),
         ANY(0x01 | 0x02 | 0x04 | 0x08);
 
         private int val;
@@ -1858,6 +1858,7 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
 
     protected enum NoteType {READ, RECV}
 
+    @SuppressWarnings("EmptyMethod")
     public static class Listener<DP, DR, SP, SR> {
 
         public void onSubscribe(int code, String text) {
@@ -1928,9 +1929,7 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
         public void onOnline(boolean online) {
         }
 
-        /**
-         * Called when contact is updated.
-         */
+        /** Called when contact is updated. */
         public void onContUpdated(String contact) {
         }
     }
@@ -2040,11 +2039,6 @@ public class Topic<DP, DR, SP, SR> implements LocalData, Comparable<Topic> {
 
         public MetaGetBuilder withTags() {
             meta.setTags();
-            return this;
-        }
-
-        public MetaGetBuilder withCred() {
-            meta.setCred();
             return this;
         }
 

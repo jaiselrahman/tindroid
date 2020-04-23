@@ -42,6 +42,9 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -52,6 +55,7 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -64,22 +68,18 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
-import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.exifinterface.media.ExifInterface;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
-
-import com.google.i18n.phonenumbers.NumberParseException;
-import com.google.i18n.phonenumbers.PhoneNumberUtil;
-
 import androidx.fragment.app.FragmentManager;
+import co.tinode.tindroid.account.ContactsManager;
 import co.tinode.tindroid.account.Utils;
 import co.tinode.tindroid.db.BaseDb;
 import co.tinode.tindroid.media.VxCard;
 import co.tinode.tindroid.widgets.LetterTileDrawable;
 import co.tinode.tindroid.widgets.OnlineDrawable;
 import co.tinode.tindroid.widgets.RoundImageDrawable;
-
+import co.tinode.tinodesdk.ComTopic;
 import co.tinode.tinodesdk.MeTopic;
 import co.tinode.tinodesdk.NotConnectedException;
 import co.tinode.tinodesdk.PromisedReply;
@@ -103,7 +103,7 @@ public class UiUtils {
     static final int ACTIVITY_RESULT_SELECT_PICTURE = 1;
 
     static final int READ_EXTERNAL_STORAGE_PERMISSION = 100;
-    static final int READ_CONTACTS_PERMISSION = 101;
+    static final int CONTACTS_PERMISSION_ID = 101;
 
     static final String PREF_TYPING_NOTIF = "pref_typingNotif";
     static final String PREF_READ_RCPT = "pref_readReceipts";
@@ -188,7 +188,9 @@ public class UiUtils {
         layers.setId(2, LOGO_LAYER_TYPING);
         toolbar.setLogo(layers);
         Rect b = toolbar.getLogo().getBounds();
-        typing.setBounds(b.right - b.width() / 4, b.bottom - b.height() / 4, b.right, b.bottom);
+        if (!b.isEmpty()) {
+            typing.setBounds(b.right - b.width() / 4, b.bottom - b.height() / 4, b.right, b.bottom);
+        }
     }
 
     @SuppressWarnings("SameParameterValue")
@@ -206,9 +208,13 @@ public class UiUtils {
             return null;
         }
 
+        Rect b = logo.getBounds();
+        if (b.isEmpty()) {
+            return null;
+        }
+
         final AnimationDrawable typing = (AnimationDrawable) ((LayerDrawable) logo)
                 .findDrawableByLayerId(LOGO_LAYER_TYPING);
-        Rect b = logo.getBounds();
         typing.setBounds(b.right - b.width() / 4, b.bottom - b.height() / 4, b.right, b.bottom);
         typing.setVisible(true, false);
         typing.setAlpha(255);
@@ -272,7 +278,7 @@ public class UiUtils {
         if (acc != null) {
             requestImmediateContactsSync(acc);
             ContentResolver.setSyncAutomatically(acc, Utils.SYNC_AUTHORITY, true);
-            TindroidApp.startWatchingContacts(acc);
+            TindroidApp.startWatchingContacts(activity, acc);
         }
 
         Intent intent = new Intent(activity, ChatsActivity.class);
@@ -281,9 +287,13 @@ public class UiUtils {
         activity.finish();
     }
 
-    static void doLogout() {
+    static void doLogout(Context context) {
         TindroidApp.stopWatchingContacts();
         Cache.invalidate();
+
+        Intent intent = new Intent(context, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        context.startActivity(intent);
     }
 
     static synchronized void requestImmediateContactsSync(Account acc) {
@@ -299,8 +309,26 @@ public class UiUtils {
                 ActivityCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED;
     }
 
+    static void onContactsPermissionsGranted(Activity activity) {
+        Account acc = Utils.getSavedAccount(activity, AccountManager.get(activity), Cache.getTinode().getMyId());
+        if (acc == null) {
+            return;
+        }
+
+        Collection<ComTopic<VxCard>> topics = Cache.getTinode().getFilteredTopics(new Tinode.TopicFilter() {
+            @Override
+            public boolean isIncluded(Topic topic) {
+                return topic.isP2PType();
+            }
+        });
+        ContactsManager.updateContacts(activity, acc, topics);
+
+        TindroidApp.startWatchingContacts(activity, acc);
+    }
+
     // Creates or updates the Android account associated with the given UID.
-    static void updateAndroidAccount(final Context context, final String uid, final String secret, final String token) {
+    static void updateAndroidAccount(final Context context, final String uid, final String secret,
+                                     final String token, final Date tokenExpires) {
         final AccountManager am = AccountManager.get(context);
         final Account acc = Utils.createAccount(uid);
         // It's OK to call even if the account already exists.
@@ -310,6 +338,7 @@ public class UiUtils {
         }
         if (!TextUtils.isEmpty(token)) {
             am.setAuthToken(acc, Utils.TOKEN_TYPE, token);
+            am.setUserData(acc, Utils.TOKEN_EXPIRATION_TIME, String.valueOf(tokenExpires.getTime()));
         }
     }
 
@@ -394,11 +423,11 @@ public class UiUtils {
             width = width * AVATAR_SIZE / height;
             height = AVATAR_SIZE;
             // Sanity check
-            width = width > MAX_BITMAP_SIZE ? MAX_BITMAP_SIZE : width;
+            width = Math.min(width, MAX_BITMAP_SIZE);
         } else {
             height = height * AVATAR_SIZE / width;
             width = AVATAR_SIZE;
-            height = height > MAX_BITMAP_SIZE ? MAX_BITMAP_SIZE : height;
+            height = Math.min(height, MAX_BITMAP_SIZE);
         }
         // Scale up or down.
         bmp = Bitmap.createScaledBitmap(bmp, width, height, true);
@@ -626,10 +655,6 @@ public class UiUtils {
     static Bitmap bitmapFromDrawable(Drawable drawable) {
         if (drawable instanceof BitmapDrawable) {
             return ((BitmapDrawable) drawable).getBitmap();
-        }
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            drawable = (DrawableCompat.wrap(drawable)).mutate();
         }
 
         Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(),
@@ -938,11 +963,8 @@ public class UiUtils {
                         if (err instanceof ServerResponseException) {
                             ServerResponseException sre = (ServerResponseException) err;
                             int errCode = sre.getCode();
-                            if (errCode == 404) {
-                                UiUtils.doLogout();
-                                Intent intent = new Intent(activity, LoginActivity.class);
-                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                                activity.startActivity(intent);
+                            if (errCode == 401 || errCode == 403 || errCode == 404) {
+                                doLogout(activity);
                                 activity.finish();
                             } else if (errCode == 502 && "cluster unreachable".equals(sre.getMessage())) {
                                 // Must reset connection.
@@ -1028,7 +1050,7 @@ public class UiUtils {
 
                         long id;
                         try {
-                            id = Long.valueOf(docId);
+                            id = Long.parseLong(docId);
                         } catch (NumberFormatException e) {
                             Log.w(TAG, "Failed to parse document ID: " + docId);
                             return null;
@@ -1194,7 +1216,7 @@ public class UiUtils {
             if (code <= 0) {
                 Log.d(TAG, "Network error");
             } else {
-                Log.d(TAG, "Tinode error: " + code);
+                Log.d(TAG, "onDisconnect error: " + code);
             }
             setConnected(false);
         }

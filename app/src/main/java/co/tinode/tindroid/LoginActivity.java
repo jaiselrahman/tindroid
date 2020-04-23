@@ -1,24 +1,10 @@
 package co.tinode.tindroid;
 
 
-import android.Manifest;
 import android.accounts.AccountAuthenticatorResponse;
 import android.accounts.AccountManager;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatDelegate;
-import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.FragmentTransaction;
-import androidx.preference.PreferenceManager;
-import androidx.appcompat.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.MenuItem;
@@ -27,10 +13,14 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import java.util.ArrayList;
-
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.preference.PreferenceManager;
 import co.tinode.tindroid.db.BaseDb;
-import co.tinode.tinodesdk.Tinode;
 
 /**
  * LoginActivity is a FrameLayout which switches between fragments:
@@ -59,8 +49,6 @@ public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
 
-    private static final int PERMISSIONS_REQUEST_ID = 100;
-
     public static final String EXTRA_CONFIRM_CREDENTIALS = "confirmCredentials";
     public static final String EXTRA_ADDING_ACCOUNT = "addNewAccount";
 
@@ -74,11 +62,6 @@ public class LoginActivity extends AppCompatActivity {
 
     private AccountAuthenticatorResponse mAccountAuthenticatorResponse = null;
     private Bundle mResultBundle = null;
-
-    static {
-        // Otherwise crash on pre-Lollipop (per-API 21)
-        AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,7 +97,7 @@ public class LoginActivity extends AppCompatActivity {
                 null, false);
 
         // Check and possibly request runtime permissions.
-        requestPermissions();
+        // requestPermissions();
     }
 
     @Override
@@ -127,52 +110,6 @@ public class LoginActivity extends AppCompatActivity {
     public void onPause() {
         super.onPause();
     }
-
-    // Run-time check for permissions.
-    private void requestPermissions() {
-        // Check the SDK version and whether the permission is already granted or not.
-        // Result will be returned in onRequestPermissionsResult
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            ArrayList<String> permissions = new ArrayList<>();
-
-            if (!UiUtils.isPermissionGranted(this, Manifest.permission.GET_ACCOUNTS)) {
-                permissions.add(Manifest.permission.GET_ACCOUNTS);
-            }
-            if (!UiUtils.isPermissionGranted(this, Manifest.permission.READ_CONTACTS)) {
-                permissions.add(Manifest.permission.READ_CONTACTS);
-            }
-            if (!UiUtils.isPermissionGranted(this, Manifest.permission.WRITE_CONTACTS)) {
-                permissions.add(Manifest.permission.WRITE_CONTACTS);
-            }
-
-            // Prevent requesting permission if the requested list is empty
-            if (permissions.isEmpty())
-                return;
-
-            ActivityCompat.requestPermissions(this,
-                    permissions.toArray(new String[]{}), PERMISSIONS_REQUEST_ID);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void onRequestPermissionsResult(final int requestCode, @NonNull final String[] permissions,
-                                           @NonNull final int[] grantResults) {
-        //
-        if (requestCode == PERMISSIONS_REQUEST_ID) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission is granted
-                Log.d(TAG, "Access granted");
-            } else {
-                // Permission denied, so we won't be able to save login token
-                Toast.makeText(this, R.string.some_permissions_missing, Toast.LENGTH_SHORT).show();
-                Log.e(TAG, "Access denied");
-            }
-        }
-    }
-
 
     void reportError(final Exception err, final Button button, final int attachTo, final int errId) {
         String message = getText(errId).toString();

@@ -17,10 +17,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.recyclerview.widget.RecyclerView;
-
 import co.tinode.tindroid.media.VxCard;
 import co.tinode.tinodesdk.model.Subscription;
 
@@ -106,13 +104,12 @@ public class FindAdapter extends RecyclerView.Adapter<FindAdapter.ViewHolder>
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        final LayoutInflater inflater = (LayoutInflater) parent.getContext()
-                .getSystemService(AppCompatActivity.LAYOUT_INFLATER_SERVICE);
+        final LayoutInflater inflater = LayoutInflater.from(parent.getContext());
         View view = inflater.inflate(viewType, parent, false);
         switch (viewType) {
             case R.layout.not_found:
             case R.layout.no_permission:
-            case R.layout.not_search_query:
+            case R.layout.no_search_query:
                 return new ViewHolderEmpty(view);
             case R.layout.contact_section:
                 return new ViewHolderSection(view);
@@ -156,7 +153,7 @@ public class FindAdapter extends RecyclerView.Adapter<FindAdapter.ViewHolder>
 
         count = getFoundItemCount();
         if (count == 0 && position == 0) {
-            return TextUtils.isEmpty(mSearchTerm) ? R.layout.not_search_query : R.layout.not_found;
+            return TextUtils.isEmpty(mSearchTerm) ? R.layout.no_search_query : R.layout.not_found;
         }
 
         return R.layout.contact;

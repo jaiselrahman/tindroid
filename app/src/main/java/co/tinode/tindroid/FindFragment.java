@@ -17,21 +17,18 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.SearchView;
-
-import androidx.appcompat.widget.ShareActionProvider;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.ShareActionProvider;
 import androidx.core.view.MenuItemCompat;
-import androidx.core.widget.ContentLoadingProgressBar;
 import androidx.fragment.app.Fragment;
 import androidx.loader.app.LoaderManager;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import co.tinode.tindroid.media.VxCard;
 import co.tinode.tindroid.widgets.CircleProgressView;
 import co.tinode.tinodesdk.FndTopic;
@@ -208,14 +205,17 @@ public class FindFragment extends Fragment implements UiUtils.ProgressIndicator 
             return;
         }
 
+        final SearchManager searchManager =
+                (SearchManager) activity.getSystemService(Activity.SEARCH_SERVICE);
+
+        if (searchManager == null) {
+            return;
+        }
+
         // Setting up SearchView
 
         // Locate the search item
         MenuItem searchItem = menu.findItem(R.id.action_search);
-
-        // Retrieves the system search manager service
-        final SearchManager searchManager =
-                (SearchManager) activity.getSystemService(Activity.SEARCH_SERVICE);
 
         // Retrieves the SearchView from the search menu item
         final SearchView searchView = (SearchView) searchItem.getActionView();
@@ -430,18 +430,27 @@ public class FindFragment extends Fragment implements UiUtils.ProgressIndicator 
             Bundle args = new Bundle();
             args.putString(ContactsLoaderCallback.ARG_SEARCH_TERM, searchTerm);
             LoaderManager.getInstance(activity).restartLoader(LOADER_ID, args, mContactsLoaderCallback);
-        } else if (activity.isReadContactsPermissionRequested()) {
+        } else if (!activity.isReadContactsPermissionRequested()) {
             mAdapter.setContactsPermission(false);
             activity.setReadContactsPermissionRequested();
-            requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, UiUtils.READ_CONTACTS_PERMISSION);
+            requestPermissions(new String[]{Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS},
+                    UiUtils.CONTACTS_PERMISSION_ID);
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
-        if (requestCode == UiUtils.READ_CONTACTS_PERMISSION) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == UiUtils.CONTACTS_PERMISSION_ID) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Sync p2p topics to Contacts.
+                Activity activity = getActivity();
+                if (activity == null) {
+                    return;
+                }
+                // Sync contacts.
+                UiUtils.onContactsPermissionsGranted(activity);
                 // Permission is granted
                 restartLoader(mSearchTerm);
             }

@@ -10,14 +10,11 @@ import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
-import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
-import androidx.core.graphics.drawable.DrawableCompat;
 import android.text.TextUtils;
 
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import co.tinode.tindroid.R;
-import co.tinode.tinodesdk.model.VCard;
 
 /**
  * A drawable that encapsulates all the functionality needed to display a letter tile to
@@ -31,7 +28,7 @@ public class LetterTileDrawable extends Drawable {
      * Contact type constants
      */
     public enum ContactType {
-        PERSON, GROUP;
+        PERSON, GROUP
     }
     private static final ContactType TYPE_DEFAULT = ContactType.PERSON;
 
@@ -141,10 +138,6 @@ public class LetterTileDrawable extends Drawable {
         Drawable drawable = ContextCompat.getDrawable(context, drawableId);
         if (drawable == null) {
             throw new IllegalStateException("getBitmapFromVectorDrawable failed: null drawable");
-        }
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            drawable = (DrawableCompat.wrap(drawable)).mutate();
         }
 
         Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(),

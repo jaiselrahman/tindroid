@@ -6,8 +6,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
-import androidx.annotation.NonNull;
-import androidx.appcompat.content.res.AppCompatResources;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.SpannedString;
@@ -33,6 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.content.res.AppCompatResources;
 import co.tinode.tindroid.R;
 import co.tinode.tinodesdk.model.Drafty;
 
@@ -116,13 +116,13 @@ public class SpanFormatter implements Drafty.Formatter<SpanFormatter.TreeNode> {
                 float maxWidth = mViewport - IMAGE_H_PADDING * metrics.density;
 
                 // Make sure the scaled bitmap is no bigger than the viewport size;
-                float scaleX = (width < maxWidth ? width : maxWidth) / width;
-                float scaleY = (height < maxWidth * 0.75f ? height : maxWidth * 0.75f) / height;
-                float scale = scaleX < scaleY ? scaleX : scaleY;
+                float scaleX = Math.min(width, maxWidth) / width;
+                float scaleY = Math.min(height, maxWidth * 0.75f) / height;
+                float scale = Math.min(scaleX, scaleY);
 
                 bmp = Bitmap.createScaledBitmap(bmp, (int)(width * scale), (int)(height * scale), true);
 
-            } catch (NullPointerException | IllegalArgumentException | ClassCastException ex) {
+            } catch (Exception ex) {
                 Log.w(TAG, "Broken Image", ex);
             }
 
@@ -175,6 +175,7 @@ public class SpanFormatter implements Drafty.Formatter<SpanFormatter.TreeNode> {
 
             // Insert document icon
             Drawable icon = AppCompatResources.getDrawable(ctx, R.drawable.ic_file);
+            //noinspection ConstantConditions
             icon.setBounds(0, 0, icon.getIntrinsicWidth(), icon.getIntrinsicHeight());
             ImageSpan span = new ImageSpan(icon, ImageSpan.ALIGN_BOTTOM);
             final Rect bounds = span.getDrawable().getBounds();
@@ -200,6 +201,7 @@ public class SpanFormatter implements Drafty.Formatter<SpanFormatter.TreeNode> {
                 TreeNode saveLink = new TreeNode();
                 // Add 'download file' icon
                 icon = AppCompatResources.getDrawable(ctx, R.drawable.ic_download_link);
+                //noinspection ConstantConditions
                 icon.setBounds(0, 0, icon.getIntrinsicWidth(), icon.getIntrinsicHeight());
                 saveLink.addNode(new ImageSpan(icon, ImageSpan.ALIGN_BOTTOM), " ");
                 // Add "save" text and make it clickable.
